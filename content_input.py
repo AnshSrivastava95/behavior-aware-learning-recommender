@@ -23,6 +23,3 @@ def extract_topics(text):
             continue
         topics.append(line)
     return topics
-    
-text=pdf_read("cs.pdf")
-print(extract_topics(text))

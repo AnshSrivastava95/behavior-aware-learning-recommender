@@ -1,9 +1,12 @@
-import pandas as pd
-import google.generativeai as genai
 
-genai.configure(api_key="AIzaSyANgndoSuBctEJmWBgi7EGyic-ZvkD8pP0")
+import google.generativeai as genai
+from tkinter import Tk, filedialog
+from content_input import pdf_read, extract_topics
+from secrets import API_KEY
+
+
+genai.configure(api_key=API_KEY)
 model = genai.GenerativeModel("models/gemini-2.5-flash")
-content_db = pd.read_csv("content.csv")
 
 student_profile = {
     "strategy": "focused",
@@ -11,6 +14,23 @@ student_profile = {
     "prefered_difficulty": 0.65
 }
 
+
+# Hide main window
+root = Tk()
+root.withdraw()
+
+# Open file picker
+file_path = filedialog.askopenfilename(
+    title="Select Syllabus PDF",
+    filetypes=[("PDF Files", "*.pdf")]
+)
+
+if file_path:
+
+    text = pdf_read(file_path)
+    topics = extract_topics(text)
+else:
+    print("No file selected")
 
 def generate_focused(profile, unit):
 
@@ -48,34 +68,36 @@ def generate_content(profile, unit):
     else:
         raise ValueError("Unknown strategy")
 
-
-
-def build_prompt(step, profile):
+def build_prompt(step, profile, syllabus_text):
 
     return f"""
 You are an expert computer science tutor.
 
 Student prefers: {profile['prefered_modality']} learning.
 
-Generate content for:
-
 Topic: {step['unit']}
 Modality: {step['modality']}
 Difficulty: {step['difficulty']}
 
-Rules:
-- Practice → create a problem
-- Quiz → create 3 MCQs with answers
-- Visual → intuitive explanation
-- Revision → short notes
-- Challenge → difficult problem
+Use the following syllabus context:
+{syllabus_text[:1000]}
 
-Keep it clear, structured, and student-friendly.
+Instructions:
+- Stay strictly within syllabus
+- Generate relevant content only
+- Practice → problem
+- Quiz → 3 MCQs with answers
+- Visual → explanation
+- Revision → short notes
+- Challenge → advanced problem
+
+Keep it structured and clear.
 """
-def generate_with_gemini(step, profile):
+
+def generate_with_gemini(step, profile,syllabus_text):
 
     try:
-        prompt = build_prompt(step, profile)
+        prompt = build_prompt(step, profile,syllabus_text)
 
         response = model.generate_content(prompt)
 
@@ -90,6 +112,6 @@ for step in learning_path:
     print("\n====================")
     print("STEP:", step)
 
-    content = generate_with_gemini(step, student_profile)
+    content = generate_with_gemini(step, student_profile,text)
 
     print("CONTENT:\n", content)
